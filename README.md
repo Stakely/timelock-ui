@@ -11,8 +11,8 @@
 </p>
 
 <p align="center">
-  <a href="https://timelockui.stakely.io">
-    <img alt="Live Demo" src="https://img.shields.io/badge/demo-timelockui.stakely.io-6366f1?style=flat-square&logo=googlechrome&logoColor=white" />
+  <a href="https://timelock.stakely.io">
+    <img alt="Live Demo" src="https://img.shields.io/badge/demo-timelock.stakely.io-6366f1?style=flat-square&logo=googlechrome&logoColor=white" />
   </a>
   <a href="LICENSE">
     <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" />
@@ -38,7 +38,7 @@ Connect your wallet, paste a `TimelockController` address, and you're ready to g
 
 ## Live demo
 
-**[timelockui.stakely.io](https://timelockui.stakely.io)**, hosted by [Stakely](https://stakely.io), free to use.
+**[timelock.stakely.io](https://timelock.stakely.io)**, hosted by [Stakely](https://stakely.io), free to use.
 
 You can also self-host your own instance (see [Self-hosting](#self-hosting)).
 
