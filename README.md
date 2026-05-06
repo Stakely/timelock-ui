@@ -28,17 +28,17 @@
 ## What it does
 
 Schedule, monitor, and execute timelocked operations on any EVM chain.  
-Connect your wallet, paste a `TimelockController` address, and you're ready to go — no backend, no setup, no vendor lock-in.
+Connect your wallet, paste a `TimelockController` address, and you're ready to go. No backend, no setup, no vendor lock-in.
 
 - **Any network.** Mainnet, Sepolia, Hoodi, any L2 or custom RPC you configure.
-- **Any contract.** Paste any `TimelockController` address — no hardcoded deployments.
+- **Any contract.** Paste any `TimelockController` address. No hardcoded deployments.
 - **No backend.** Everything runs in the browser; state is persisted in `localStorage`.
 - **Non-custodial.** Your wallet signs every transaction; the app never touches your keys.
-- **Wallet-agnostic.** MetaMask, Coinbase, Rainbow, WalletConnect — any Safe via WalletConnect.
+- **Wallet-agnostic.** MetaMask, Coinbase, Rainbow, WalletConnect. Any Safe via WalletConnect.
 
 ## Live demo
 
-**[timelockui.stakely.io](https://timelockui.stakely.io)** — hosted by [Stakely](https://stakely.io), free to use.
+**[timelockui.stakely.io](https://timelockui.stakely.io)**, hosted by [Stakely](https://stakely.io), free to use.
 
 You can also self-host your own instance (see [Self-hosting](#self-hosting)).
 
@@ -54,7 +54,7 @@ schedule  →  wait delay  →  execute
 2. **Wait.** The operation stays in `Waiting` state until the delay elapses, then becomes `Ready`.
 3. **Execute.** Any account with `EXECUTOR_ROLE` calls `execute()`. Any account with `CANCELLER_ROLE` can call `cancel()` instead.
 
-The UI also picks up operations scheduled outside of it — the **Sync chain** button scans `CallScheduled` events so you can monitor a Timelock you don't control.
+The UI also picks up operations scheduled outside of it: the **Sync chain** button scans `CallScheduled` events so you can monitor a Timelock you don't control.
 
 ## Self-hosting
 
@@ -84,7 +84,7 @@ Copy `.env.example` to `.env` and set your own Project ID (free at [cloud.reown.
 VITE_WC_PROJECT_ID=your_project_id
 ```
 
-The app falls back to a bundled public ID if the variable is not set — fine for local dev, but use your own for production.
+The app falls back to a bundled public ID if the variable is not set. Fine for local dev, but use your own for production.
 
 ## Stack
 
@@ -112,16 +112,9 @@ All state lives in `localStorage` under the `tl-ui:*` namespace:
 
 Clearing site data resets the app completely.
 
-## Roadmap
-
-- [ ] Safe SDK integration (`@safe-global/safe-apps-react-sdk`)
-- [ ] Import operation from a `CallScheduled` transaction hash
-- [ ] Safe App manifest
-- [ ] Batch operations (`scheduleBatch` / `executeBatch`)
-
 ## Contributing
 
-Pull requests are welcome. The codebase is small and self-contained — no Solidity, no backend, just a frontend talking to the chain through viem.
+Pull requests are welcome. The codebase is small and self-contained: no Solidity, no backend, just a frontend talking to the chain through viem.
 
 For bugs or feature requests, open an issue at [github.com/stakely/timelock-ui/issues](https://github.com/stakely/timelock-ui/issues).
 
