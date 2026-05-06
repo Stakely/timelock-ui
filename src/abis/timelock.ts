@@ -1,0 +1,141 @@
+export const timelockAbi = [
+  // ─── Lectura ───────────────────────────────────────────────
+  {
+    name: 'getMinDelay',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'getOperationState',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'id', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'uint8' }],
+  },
+  {
+    name: 'getTimestamp',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'id', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'hashOperation',
+    type: 'function',
+    stateMutability: 'pure',
+    inputs: [
+      { name: 'target', type: 'address' },
+      { name: 'value', type: 'uint256' },
+      { name: 'data', type: 'bytes' },
+      { name: 'predecessor', type: 'bytes32' },
+      { name: 'salt', type: 'bytes32' },
+    ],
+    outputs: [{ name: '', type: 'bytes32' }],
+  },
+  {
+    name: 'hasRole',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'role', type: 'bytes32' },
+      { name: 'account', type: 'address' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  // ─── Escritura ─────────────────────────────────────────────
+  {
+    name: 'schedule',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'target', type: 'address' },
+      { name: 'value', type: 'uint256' },
+      { name: 'data', type: 'bytes' },
+      { name: 'predecessor', type: 'bytes32' },
+      { name: 'salt', type: 'bytes32' },
+      { name: 'delay', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+  {
+    name: 'execute',
+    type: 'function',
+    stateMutability: 'payable',
+    inputs: [
+      { name: 'target', type: 'address' },
+      { name: 'value', type: 'uint256' },
+      { name: 'data', type: 'bytes' },
+      { name: 'predecessor', type: 'bytes32' },
+      { name: 'salt', type: 'bytes32' },
+    ],
+    outputs: [],
+  },
+  {
+    name: 'cancel',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'id', type: 'bytes32' }],
+    outputs: [],
+  },
+  // ─── Constantes de roles ────────────────────────────────────
+  {
+    name: 'TIMELOCK_ADMIN_ROLE',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'bytes32' }],
+  },
+  {
+    name: 'PROPOSER_ROLE',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'bytes32' }],
+  },
+  {
+    name: 'EXECUTOR_ROLE',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'bytes32' }],
+  },
+  {
+    name: 'CANCELLER_ROLE',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'bytes32' }],
+  },
+  // ─── Eventos ────────────────────────────────────────────────
+  {
+    name: 'CallScheduled',
+    type: 'event',
+    inputs: [
+      { name: 'id', type: 'bytes32', indexed: true },
+      { name: 'index', type: 'uint256', indexed: true },
+      { name: 'target', type: 'address', indexed: false },
+      { name: 'value', type: 'uint256', indexed: false },
+      { name: 'data', type: 'bytes', indexed: false },
+      { name: 'predecessor', type: 'bytes32', indexed: false },
+      { name: 'delay', type: 'uint256', indexed: false },
+    ],
+  },
+  {
+    name: 'CallExecuted',
+    type: 'event',
+    inputs: [
+      { name: 'id', type: 'bytes32', indexed: true },
+      { name: 'index', type: 'uint256', indexed: true },
+      { name: 'target', type: 'address', indexed: false },
+      { name: 'value', type: 'uint256', indexed: false },
+      { name: 'data', type: 'bytes', indexed: false },
+    ],
+  },
+  {
+    name: 'Cancelled',
+    type: 'event',
+    inputs: [{ name: 'id', type: 'bytes32', indexed: true }],
+  },
+] as const

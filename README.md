@@ -1,49 +1,102 @@
-# Timelock UI
+<p align="center">
+  <img src="public/timelock-ui-cover.png" alt="Timelock UI" />
+</p>
 
-An open-source web app to operate any [OpenZeppelin TimelockController](https://docs.openzeppelin.com/contracts/5.x/api/governance#TimelockController) contract from the browser.
+<h1 align="center">Timelock UI</h1>
 
-Built and maintained by [Stakely](https://stakely.io).
+<p align="center">
+  Minimal, chain-agnostic interface to operate any
+  <a href="https://docs.openzeppelin.com/contracts/5.x/api/governance#TimelockController">OpenZeppelin TimelockController</a>
+  from the browser.
+</p>
+
+<p align="center">
+  <a href="https://timelockui.stakely.io">
+    <img alt="Live Demo" src="https://img.shields.io/badge/demo-timelockui.stakely.io-6366f1?style=flat-square&logo=googlechrome&logoColor=white" />
+  </a>
+  <a href="LICENSE">
+    <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" />
+  </a>
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=white" />
+  <img alt="wagmi v2" src="https://img.shields.io/badge/wagmi-v2-1c1c1c?style=flat-square" />
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-6-3178c6?style=flat-square&logo=typescript&logoColor=white" />
+</p>
+
+---
 
 ## What it does
 
-Schedule, monitor and execute timelocked operations on any EVM chain. Connect your wallet, paste a contract address, and you're ready to go. No backend, no setup, no vendor lock-in.
+Schedule, monitor, and execute timelocked operations on any EVM chain.  
+Connect your wallet, paste a `TimelockController` address, and you're ready to go — no backend, no setup, no vendor lock-in.
 
-- **Any network.** Works on any EVM-compatible chain (Mainnet, Sepolia, Hoodi, custom RPCs, L2s, devnets).
-- **Any contract.** Paste any TimelockController address, no hardcoded deployments.
-- **No backend.** Everything runs in the browser, data is persisted in `localStorage`.
-- **Non-custodial.** Your wallet signs every transaction, the app never touches your keys.
-- **Wallet-agnostic.** Supports MetaMask, Coinbase, Rainbow and WalletConnect (any Safe via WalletConnect).
+- **Any network.** Mainnet, Sepolia, Hoodi, any L2 or custom RPC you configure.
+- **Any contract.** Paste any `TimelockController` address — no hardcoded deployments.
+- **No backend.** Everything runs in the browser; state is persisted in `localStorage`.
+- **Non-custodial.** Your wallet signs every transaction; the app never touches your keys.
+- **Wallet-agnostic.** MetaMask, Coinbase, Rainbow, WalletConnect — any Safe via WalletConnect.
+
+## Live demo
+
+**[timelockui.stakely.io](https://timelockui.stakely.io)** — hosted by [Stakely](https://stakely.io), free to use.
+
+You can also self-host your own instance (see [Self-hosting](#self-hosting)).
 
 ## How it works
 
-The classic timelock flow: `schedule → wait → execute`.
+The classic timelock flow:
 
-1. **Schedule.** Submit a `schedule()` transaction with the target contract, calldata, and a delay. The operation is queued on-chain and a countdown starts.
-2. **Wait.** The operation stays in `Waiting` state until the delay passes. Once it does, it becomes `Ready`.
-3. **Execute.** Any account with `EXECUTOR_ROLE` can call `execute()` to apply the queued action. Any account with `CANCELLER_ROLE` can call `cancel()` instead.
+```
+schedule  →  wait delay  →  execute
+```
 
-The UI also picks up operations scheduled outside of it. The `Sync chain` button scans `CallScheduled` events on the contract, so you can use it to monitor a Timelock you don't control.
+1. **Schedule.** Submit a `schedule()` transaction with the target, calldata, and a delay. The operation is queued on-chain and a countdown starts.
+2. **Wait.** The operation stays in `Waiting` state until the delay elapses, then becomes `Ready`.
+3. **Execute.** Any account with `EXECUTOR_ROLE` calls `execute()`. Any account with `CANCELLER_ROLE` can call `cancel()` instead.
+
+The UI also picks up operations scheduled outside of it — the **Sync chain** button scans `CallScheduled` events so you can monitor a Timelock you don't control.
+
+## Self-hosting
+
+Deploy your own instance in minutes:
+
+```bash
+git clone https://github.com/stakely/timelock-ui.git
+cd timelock-ui
+npm install
+npm run build
+# Serve dist/ with any static host: Vercel, Netlify, Nginx, IPFS, …
+```
+
+For local development:
+
+```bash
+cp .env.example .env       # set your WalletConnect Project ID (optional)
+npm run dev                 # http://localhost:5173
+npm run preview             # preview the production build
+```
+
+## WalletConnect Project ID
+
+Copy `.env.example` to `.env` and set your own Project ID (free at [cloud.reown.com](https://cloud.reown.com)):
+
+```bash
+VITE_WC_PROJECT_ID=your_project_id
+```
+
+The app falls back to a bundled public ID if the variable is not set — fine for local dev, but use your own for production.
 
 ## Stack
 
-- Vite + React + TypeScript
-- wagmi v2 + viem for on-chain interaction
-- RainbowKit for wallet connection
-- TailwindCSS v4 for styling
-- localStorage for persistence (no database, no backend)
-
-## Run locally
-
-```bash
-npm install
-npm run dev      # http://localhost:5173
-npm run build    # production build
-npm run preview  # preview the build
-```
-
-## WalletConnect
-
-The app ships with a public WalletConnect Project ID for convenience. If you fork this for production use, replace it with your own in `src/lib/wagmi.ts` (free at [cloud.reown.com](https://cloud.reown.com)).
+| Package | Role |
+|---------|------|
+| [Vite](https://vitejs.dev) + [React 19](https://react.dev) + [TypeScript](https://typescriptlang.org) | Core framework |
+| [wagmi v2](https://wagmi.sh) + [viem](https://viem.sh) | On-chain reads & writes |
+| [RainbowKit](https://rainbowkit.com) | Wallet connection |
+| [TailwindCSS v4](https://tailwindcss.com) | Styling |
+| [TanStack Query](https://tanstack.com/query) | Async state / caching |
+| [React Router v7](https://reactrouter.com) | Client-side routing |
+| [Lucide React](https://lucide.dev) | Icons |
 
 ## Storage
 
@@ -57,14 +110,26 @@ All state lives in `localStorage` under the `tl-ui:*` namespace:
 | `tl-ui:operations:<chainId>:<address>` | Operations per timelock |
 | `tl-ui:sync-cursor:<chainId>:<address>` | Last block scanned for incremental sync |
 
-Clearing site data resets the app.
+Clearing site data resets the app completely.
+
+## Roadmap
+
+- [ ] Safe SDK integration (`@safe-global/safe-apps-react-sdk`)
+- [ ] Import operation from a `CallScheduled` transaction hash
+- [ ] Safe App manifest
+- [ ] Batch operations (`scheduleBatch` / `executeBatch`)
 
 ## Contributing
 
-Pull requests welcome. The codebase is small and self-contained: no Solidity, no backend, just a frontend talking to the chain through viem.
+Pull requests are welcome. The codebase is small and self-contained — no Solidity, no backend, just a frontend talking to the chain through viem.
 
-If you find a bug or want to suggest a feature, open an issue at [github.com/stakely/timelock-ui/issues](https://github.com/stakely/timelock-ui/issues).
+For bugs or feature requests, open an issue at [github.com/stakely/timelock-ui/issues](https://github.com/stakely/timelock-ui/issues).
+
+```bash
+npm run lint     # ESLint
+npm run build    # type-check + production build
+```
 
 ## License
 
-MIT
+[MIT](LICENSE) © [Stakely](https://stakely.io)
