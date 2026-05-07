@@ -96,7 +96,7 @@ jobs:
           IMAGE_REF="stakely/timelock-ui@${{ steps.push.outputs.digest }}"
           echo "Deploying: $IMAGE_REF"
           # Adjust the path to match your Helm/ArgoCD values structure
-          yq e ".frontend.timelock-ui.image = \"$IMAGE_REF\"" -i web/values.production.yaml
+          yq e ".frontend.timelockUi.image = \"$IMAGE_REF\"" -i web/values.production.yaml
           git config user.email "workflows@stakely.io"
           git config user.name "Stakely Workflow"
           git add -A
