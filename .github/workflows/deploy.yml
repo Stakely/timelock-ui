@@ -1,0 +1,130 @@
+# ─── Required secrets ────────────────────────────────────────────────────────
+# DOCKERHUB_USERNAME      — DockerHub username
+# DOCKERHUB_PASSWORD      — DockerHub access token (not the account password)
+# VITE_WC_PROJECT_ID      — WalletConnect Project ID (ends up public in the JS bundle)
+# SSH_PRIVATE_KEY         — private key to clone kubernetes-manifests
+# DISCORD_WEBHOOK_URL     — Discord webhook for notifications
+#
+# ─── Hash pinning ────────────────────────────────────────────────────────────
+# To pin every action to a specific commit hash and prevent supply-chain attacks,
+# run once:
+#   npx pin-github-action .github/workflows/deploy.yml
+# Or enable Renovate/Dependabot to manage it automatically.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types: [completed]
+
+# Do not cancel in-progress deploys: a half-done deploy is worse than a queued one.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build, Push and Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Only run if CI completed successfully
+    if: github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Get commit metadata
+        run: |
+          echo "COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')" >> $GITHUB_ENV
+          echo "COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
+        with:
+          images: stakely/timelock-ui
+          tags: |
+            type=raw,value=main
+            type=sha,format=short
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_WC_PROJECT_ID=${{ secrets.VITE_WC_PROJECT_ID }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@e83874834305fe9a4a2997156cb26c5de65a8555 # v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add GitHub to known hosts
+        run: ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Clone manifests repository
+        run: git clone git@github.com:Stakely/kubernetes-manifests.git
+
+      - name: Update image digest in manifests
+        run: |
+          cd kubernetes-manifests
+          IMAGE_REF="stakely/timelock-ui@${{ steps.push.outputs.digest }}"
+          echo "Deploying: $IMAGE_REF"
+          # Adjust the path to match your Helm/ArgoCD values structure
+          yq e ".frontend.timelock-ui.image = \"$IMAGE_REF\"" -i web/values.production.yaml
+          git config user.email "workflows@stakely.io"
+          git config user.name "Stakely Workflow"
+          git add -A
+          git commit -m "Update timelock-ui:main image digest"
+          git push
+
+      - name: Discord — success
+        uses: tsickert/discord-webhook@b217a69502f52803de774ded2b1ab7c282e99645 # v7.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          username: GitHub Actions
+          avatar-url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
+          embed-color: "3066993"
+          embed-description: |
+            Workflow _${{ github.workflow }}_ completed ✅
+            ArgoCD will deploy the changes in <3 min.
+            - **Commit**: _${{ env.COMMIT_MESSAGE }}_ by _${{ env.COMMIT_AUTHOR }}_
+            - **Repo**: https://github.com/${{ github.repository }}
+
+      - name: Discord — failure
+        if: failure()
+        uses: tsickert/discord-webhook@b217a69502f52803de774ded2b1ab7c282e99645 # v7.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          username: GitHub Actions
+          avatar-url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
+          embed-color: "15158332"
+          embed-description: |
+            ❌ Error in _${{ github.workflow }}_ — nothing will be deployed until this is fixed.
+            - **Commit**: _${{ env.COMMIT_MESSAGE }}_ by _${{ env.COMMIT_AUTHOR }}_
+            - **Logs**: https://github.com/${{ github.repository }}/actions
