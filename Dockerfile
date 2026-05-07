@@ -12,7 +12,8 @@ COPY . .
 
 # WalletConnect Project ID is baked at build time (public identifier).
 # Pass with: --build-arg VITE_WC_PROJECT_ID=<your-id>
-# If empty, WalletConnect won't initialize but other wallets still work.
+# Optional: if empty, the WalletConnect option is hidden in the wallet modal
+# but extension wallets (MetaMask, Coinbase, Rainbow) keep working.
 ARG VITE_WC_PROJECT_ID=""
 ENV VITE_WC_PROJECT_ID=${VITE_WC_PROJECT_ID}
 

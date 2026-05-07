@@ -9,7 +9,10 @@ import {
 } from '@rainbow-me/rainbowkit/wallets'
 import { getNetworks, type StoredNetwork } from './storage'
 
-const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID ?? ''
+export const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID ?? ''
+// RainbowKit v2 aborts on an empty projectId even when WalletConnect is unused,
+// so feed it a non-empty placeholder when the env var is missing.
+const RK_PROJECT_ID = WC_PROJECT_ID || 'walletconnect-disabled'
 
 function storedNetworkToChain(n: StoredNetwork) {
   return {
@@ -33,16 +36,15 @@ export function buildWagmiConfig() {
   const customChains = stored.map(storedNetworkToChain)
   const chains = customChains.length > 0 ? customChains : [mainnet, sepolia]
 
+  const wallets = WC_PROJECT_ID
+    ? [metaMaskWallet, walletConnectWallet, coinbaseWallet, rainbowWallet]
+    : [metaMaskWallet, coinbaseWallet, rainbowWallet]
+
   const connectors = connectorsForWallets(
-    [
-      {
-        groupName: 'Recommended',
-        wallets: [metaMaskWallet, walletConnectWallet, coinbaseWallet, rainbowWallet],
-      },
-    ],
+    [{ groupName: 'Recommended', wallets }],
     {
       appName: 'Timelock UI',
-      projectId: WC_PROJECT_ID,
+      projectId: RK_PROJECT_ID,
     },
   )
 
