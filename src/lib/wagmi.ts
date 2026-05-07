@@ -2,6 +2,7 @@ import { createConfig, http } from 'wagmi'
 import { mainnet, sepolia } from 'wagmi/chains'
 import { connectorsForWallets } from '@rainbow-me/rainbowkit'
 import {
+  injectedWallet,
   metaMaskWallet,
   walletConnectWallet,
   coinbaseWallet,
@@ -13,6 +14,13 @@ export const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID ?? ''
 // RainbowKit v2 aborts on an empty projectId even when WalletConnect is unused,
 // so feed it a non-empty placeholder when the env var is missing.
 const RK_PROJECT_ID = WC_PROJECT_ID || 'walletconnect-disabled'
+
+if (!WC_PROJECT_ID && typeof window !== 'undefined') {
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[timelock-ui] VITE_WC_PROJECT_ID is missing — only the injected (browser) wallet is enabled. Get a free Project ID at https://cloud.reown.com.',
+  )
+}
 
 function storedNetworkToChain(n: StoredNetwork) {
   return {
@@ -36,9 +44,13 @@ export function buildWagmiConfig() {
   const customChains = stored.map(storedNetworkToChain)
   const chains = customChains.length > 0 ? customChains : [mainnet, sepolia]
 
+  // Without a WalletConnect Project ID we can only safely expose the injected
+  // (browser) wallet. The MetaMask/Coinbase/Rainbow connectors all build a WC
+  // QR for their mobile flow, which crashes with "invalid border=0" when the
+  // projectId is fake.
   const wallets = WC_PROJECT_ID
     ? [metaMaskWallet, walletConnectWallet, coinbaseWallet, rainbowWallet]
-    : [metaMaskWallet, coinbaseWallet, rainbowWallet]
+    : [injectedWallet]
 
   const connectors = connectorsForWallets(
     [{ groupName: 'Recommended', wallets }],
