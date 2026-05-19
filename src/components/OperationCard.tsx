@@ -79,7 +79,13 @@ export function OperationCard({ operation, explorerUrl, onPatched, onToast }: Pr
         value: BigInt(operation.value),
         chainId: operation.chainId,
       })
-      onPatched(operation.id, { executeTxHash: hash })
+      // Only persist a real Ethereum tx hash. The Safe flow returns a
+      // Safe-tx-hash that would render as a broken explorer link; the
+      // on-chain hash will be picked up by the chain scan after signers
+      // execute the multisig.
+      if (!safeFlow) {
+        onPatched(operation.id, { executeTxHash: hash })
+      }
 
       if (safeFlow) {
         onToast({
@@ -116,7 +122,11 @@ export function OperationCard({ operation, explorerUrl, onPatched, onToast }: Pr
         args: [operation.id],
         chainId: operation.chainId,
       })
-      onPatched(operation.id, { cancelTxHash: hash })
+      // See execute: avoid storing a Safe-tx-hash in a field rendered as an
+      // explorer link.
+      if (!safeFlow) {
+        onPatched(operation.id, { cancelTxHash: hash })
+      }
 
       if (safeFlow) {
         onToast({

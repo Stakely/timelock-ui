@@ -10,12 +10,11 @@ vi.mock('wagmi', () => ({
 
 import { useIsSafeWallet } from './useIsSafeWallet'
 
-// Returns a fake "live" connector — the kind useConnections() yields once a
-// wallet is connected, including the getProvider instance method.
 function liveConnector(opts: {
   id: string
   name: string
   type?: string
+  uid?: string
   provider?: any
   getProvider?: () => Promise<any>
 }) {
@@ -23,7 +22,7 @@ function liveConnector(opts: {
     id: opts.id,
     name: opts.name,
     type: opts.type ?? opts.id,
-    uid: 'uid-test',
+    uid: opts.uid ?? 'uid-test',
     getProvider:
       opts.getProvider ??
       (async () => opts.provider ?? { session: { peer: { metadata: {} } } }),
@@ -52,20 +51,14 @@ describe('useIsSafeWallet', () => {
   })
 
   it('stays false for a plain EOA over WalletConnect', async () => {
-    mockUseAccount.mockReturnValue({
-      connector: { id: 'walletConnect', name: 'WalletConnect', type: 'walletConnect' },
+    const conn = liveConnector({
+      id: 'walletConnect',
+      name: 'WalletConnect',
+      uid: 'uid-wc',
+      provider: { session: { peer: { metadata: { name: 'Rainbow', url: 'https://rainbow.me' } } } },
     })
-    mockUseConnections.mockReturnValue([
-      {
-        connector: liveConnector({
-          id: 'walletConnect',
-          name: 'WalletConnect',
-          provider: {
-            session: { peer: { metadata: { name: 'Rainbow', url: 'https://rainbow.me' } } },
-          },
-        }),
-      },
-    ])
+    mockUseAccount.mockReturnValue({ connector: { id: 'walletConnect', name: 'WalletConnect', uid: 'uid-wc' } })
+    mockUseConnections.mockReturnValue([{ connector: conn }])
     const { result } = renderHook(() => useIsSafeWallet())
     expect(result.current).toBe(false)
     await new Promise((r) => setTimeout(r, 10))
@@ -73,51 +66,68 @@ describe('useIsSafeWallet', () => {
   })
 
   it('flips to true once Safe is detected via WalletConnect peer metadata', async () => {
-    mockUseAccount.mockReturnValue({
-      connector: { id: 'walletConnect', name: 'WalletConnect', type: 'walletConnect' },
-    })
-    mockUseConnections.mockReturnValue([
-      {
-        connector: liveConnector({
-          id: 'walletConnect',
-          name: 'WalletConnect',
-          provider: {
-            session: {
-              peer: {
-                metadata: { name: 'Safe{Wallet}', url: 'https://app.safe.global' },
-              },
-            },
-          },
-        }),
+    const conn = liveConnector({
+      id: 'walletConnect',
+      name: 'WalletConnect',
+      uid: 'uid-wc',
+      provider: {
+        session: {
+          peer: { metadata: { name: 'Safe{Wallet}', url: 'https://app.safe.global' } },
+        },
       },
-    ])
+    })
+    mockUseAccount.mockReturnValue({ connector: { id: 'walletConnect', name: 'WalletConnect', uid: 'uid-wc' } })
+    mockUseConnections.mockReturnValue([{ connector: conn }])
     const { result } = renderHook(() => useIsSafeWallet())
-    expect(result.current).toBe(false) // sync answer before the async probe lands
+    expect(result.current).toBe(false)
     await waitFor(() => expect(result.current).toBe(true))
   })
 
-  it('detects Safe even when only the metadata url gives it away', async () => {
-    mockUseAccount.mockReturnValue({
-      connector: { id: 'walletConnect', name: 'WalletConnect', type: 'walletConnect' },
+  it('rejects SafePal even over WC (no false positive on look-alikes)', async () => {
+    const conn = liveConnector({
+      id: 'walletConnect',
+      name: 'WalletConnect',
+      uid: 'uid-wc',
+      provider: { session: { peer: { metadata: { name: 'SafePal', url: 'https://safepal.com' } } } },
     })
-    mockUseConnections.mockReturnValue([
-      {
-        connector: liveConnector({
-          id: 'walletConnect',
-          name: 'WalletConnect',
-          provider: {
-            session: { peer: { metadata: { name: 'Unknown', url: 'https://app.safe.global' } } },
-          },
-        }),
+    mockUseAccount.mockReturnValue({ connector: { id: 'walletConnect', name: 'WalletConnect', uid: 'uid-wc' } })
+    mockUseConnections.mockReturnValue([{ connector: conn }])
+    const { result } = renderHook(() => useIsSafeWallet())
+    await new Promise((r) => setTimeout(r, 10))
+    expect(result.current).toBe(false)
+  })
+
+  it('picks the connection that matches the active account uid', async () => {
+    // Two simultaneous connections: an injected EOA and a Safe-over-WC. The
+    // active account is the WC one — we must read THAT peer metadata, not
+    // the injected one's.
+    const injected = liveConnector({
+      id: 'injected',
+      name: 'MetaMask',
+      uid: 'uid-injected',
+      provider: { session: { peer: { metadata: { name: 'MetaMask' } } } },
+    })
+    const safeWc = liveConnector({
+      id: 'walletConnect',
+      name: 'WalletConnect',
+      uid: 'uid-safe-wc',
+      provider: {
+        session: {
+          peer: { metadata: { name: 'Safe{Wallet}', url: 'https://app.safe.global' } },
+        },
       },
-    ])
+    })
+    mockUseAccount.mockReturnValue({
+      connector: { id: 'walletConnect', name: 'WalletConnect', uid: 'uid-safe-wc' },
+    })
+    mockUseConnections.mockReturnValue([{ connector: injected }, { connector: safeWc }])
     const { result } = renderHook(() => useIsSafeWallet())
     await waitFor(() => expect(result.current).toBe(true))
   })
 
   it('does not crash if the live connector lacks getProvider (descriptor only)', async () => {
     mockUseAccount.mockReturnValue({
-      connector: { id: 'walletConnect', name: 'WalletConnect', type: 'walletConnect' },
+      connector: { id: 'walletConnect', name: 'WalletConnect', uid: 'uid-wc' },
     })
     mockUseConnections.mockReturnValue([
       {
@@ -125,7 +135,7 @@ describe('useIsSafeWallet', () => {
           id: 'walletConnect',
           name: 'WalletConnect',
           type: 'walletConnect',
-          uid: 'uid-x',
+          uid: 'uid-wc',
         },
       },
     ])
@@ -135,20 +145,16 @@ describe('useIsSafeWallet', () => {
   })
 
   it('does not crash if getProvider throws', async () => {
-    mockUseAccount.mockReturnValue({
-      connector: { id: 'walletConnect', name: 'WalletConnect', type: 'walletConnect' },
-    })
-    mockUseConnections.mockReturnValue([
-      {
-        connector: liveConnector({
-          id: 'walletConnect',
-          name: 'WalletConnect',
-          getProvider: async () => {
-            throw new Error('provider not ready')
-          },
-        }),
+    const conn = liveConnector({
+      id: 'walletConnect',
+      name: 'WalletConnect',
+      uid: 'uid-wc',
+      getProvider: async () => {
+        throw new Error('provider not ready')
       },
-    ])
+    })
+    mockUseAccount.mockReturnValue({ connector: { id: 'walletConnect', name: 'WalletConnect', uid: 'uid-wc' } })
+    mockUseConnections.mockReturnValue([{ connector: conn }])
     const { result } = renderHook(() => useIsSafeWallet())
     await new Promise((r) => setTimeout(r, 10))
     expect(result.current).toBe(false)

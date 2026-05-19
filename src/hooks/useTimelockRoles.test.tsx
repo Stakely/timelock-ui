@@ -6,7 +6,32 @@ vi.mock('wagmi', () => ({
   useReadContracts: () => mockUseReadContracts(),
 }))
 
-import { useTimelockRoles } from './useTimelockRoles'
+import { useTimelockRoles, deriveRoles } from './useTimelockRoles'
+
+describe('deriveRoles (pure)', () => {
+  const empty = { isProposer: false, isExecutor: false, isCanceller: false, isAdmin: false }
+
+  it('returns prev when data is undefined', () => {
+    expect(deriveRoles(empty, undefined)).toBe(empty)
+  })
+
+  it('returns successful reads and falls back to prev on failures', () => {
+    const data = [
+      { status: 'success', result: true },
+      { status: 'failure' },
+      { status: 'success', result: true },
+      { status: 'failure' },
+      { status: 'failure' },
+    ] as const
+    const prev = { isProposer: false, isExecutor: true, isCanceller: false, isAdmin: true }
+    expect(deriveRoles(prev, data)).toEqual({
+      isProposer: true,
+      isExecutor: true, // preserved from prev (failure)
+      isCanceller: true,
+      isAdmin: true, // preserved from prev (failure)
+    })
+  })
+})
 
 const ADDR_TIMELOCK = '0x1111111111111111111111111111111111111111' as `0x${string}`
 const ADDR_USER = '0x2222222222222222222222222222222222222222' as `0x${string}`

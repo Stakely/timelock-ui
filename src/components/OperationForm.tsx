@@ -119,7 +119,11 @@ export function OperationForm({ timelockAddress, chainId, minDelay, onScheduled,
         source: 'local',
         methodSignature: rawMode ? undefined : signature,
         scheduledAt: Date.now(),
-        scheduleTxHash: hash,
+        // Only store as scheduleTxHash if it's a real Ethereum tx hash. Safe
+        // returns a Safe-tx-hash which would produce a broken explorer link;
+        // the on-chain tx hash gets populated later by the chain scan once
+        // signers execute the multisig.
+        scheduleTxHash: safeFlow ? undefined : hash,
       }
 
       upsertOperation(op)

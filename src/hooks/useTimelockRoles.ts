@@ -17,6 +17,34 @@ const EMPTY_ROLES: TimelockRoles = {
   isAdmin: false,
 }
 
+type ReadResult = ReadonlyArray<{ status: 'success' | 'failure'; result?: unknown }> | undefined
+
+// Pure merge — exported for unit testing. For each field, return the
+// successful read; on failure, fall back to the previous latched value.
+export function deriveRoles(prev: TimelockRoles, data: ReadResult): TimelockRoles {
+  if (!data) return prev
+  return {
+    isProposer: data[0]?.status === 'success' ? (data[0].result as boolean) : prev.isProposer,
+    isExecutor: data[1]?.status === 'success' ? (data[1].result as boolean) : prev.isExecutor,
+    isCanceller: data[2]?.status === 'success' ? (data[2].result as boolean) : prev.isCanceller,
+    isAdmin: data[3]?.status === 'success' ? (data[3].result as boolean) : prev.isAdmin,
+  }
+}
+
+function deriveMinDelay(prev: bigint | null, data: ReadResult): bigint | null {
+  if (!data) return prev
+  return data[4]?.status === 'success' ? (data[4].result as bigint) : prev
+}
+
+function rolesEqual(a: TimelockRoles, b: TimelockRoles): boolean {
+  return (
+    a.isProposer === b.isProposer &&
+    a.isExecutor === b.isExecutor &&
+    a.isCanceller === b.isCanceller &&
+    a.isAdmin === b.isAdmin
+  )
+}
+
 export function useTimelockRoles(
   timelockAddress: `0x${string}` | null,
   userAddress: `0x${string}` | undefined,
@@ -48,12 +76,9 @@ export function useTimelockRoles(
     query: { enabled },
   })
 
-  // Per-field latch: each role/minDelay keeps its last *successful* read.
-  // A failed re-read (RPC hiccup, common on mainnet with Safe) leaves the
-  // latch untouched instead of flipping a confirmed-true role to false and
-  // making the New operation / Execute / Cancel buttons flicker out.
-  // The latch is scoped to (user, timelock, chain) and reset when that tuple
-  // changes, since a different access-control context is a different question.
+  // Per-field latch scoped to (user, timelock, chain). A failed re-read after
+  // a successful one preserves the prior value — keeps the New operation /
+  // Execute / Cancel buttons from flickering when the RPC hiccups.
   const sessionKey = `${userAddress ?? ''}|${timelockAddress ?? ''}|${chainId ?? ''}`
   const [prevSessionKey, setPrevSessionKey] = useState(sessionKey)
   const [latchedRoles, setLatchedRoles] = useState<TimelockRoles>(EMPTY_ROLES)
@@ -64,37 +89,28 @@ export function useTimelockRoles(
     setLatchedMinDelay(null)
   }
 
+  // Derive in render — the very first render after `data` arrives must
+  // already reflect the successful reads. Computing only in useEffect would
+  // leave one render where roles look empty, briefly hiding role-gated UI
+  // (New operation / Execute / Cancel) on the path users see most often.
+  const liveRoles = deriveRoles(latchedRoles, data)
+  const liveMinDelay = deriveMinDelay(latchedMinDelay, data)
+
+  // Persist the latch for subsequent renders. The render-time `liveRoles`
+  // already shows the right value; this effect just keeps the latch in sync
+  // for when `data` later becomes undefined or partially fails.
   useEffect(() => {
     if (!data) return
     setLatchedRoles((prev) => {
-      const next: TimelockRoles = {
-        isProposer: data[0]?.status === 'success' ? (data[0].result as boolean) : prev.isProposer,
-        isExecutor: data[1]?.status === 'success' ? (data[1].result as boolean) : prev.isExecutor,
-        isCanceller: data[2]?.status === 'success' ? (data[2].result as boolean) : prev.isCanceller,
-        isAdmin: data[3]?.status === 'success' ? (data[3].result as boolean) : prev.isAdmin,
-      }
-      if (
-        next.isProposer === prev.isProposer &&
-        next.isExecutor === prev.isExecutor &&
-        next.isCanceller === prev.isCanceller &&
-        next.isAdmin === prev.isAdmin
-      ) {
-        return prev
-      }
-      return next
+      const next = deriveRoles(prev, data)
+      return rolesEqual(prev, next) ? prev : next
     })
-    if (data[4]?.status === 'success') {
-      setLatchedMinDelay(data[4].result as bigint)
-    }
+    setLatchedMinDelay((prev) => deriveMinDelay(prev, data))
   }, [data])
 
   if (!enabled) {
     return { roles: EMPTY_ROLES, isLoading, minDelay: null }
   }
 
-  return {
-    roles: latchedRoles,
-    isLoading,
-    minDelay: latchedMinDelay,
-  }
+  return { roles: liveRoles, isLoading, minDelay: liveMinDelay }
 }

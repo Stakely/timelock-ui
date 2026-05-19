@@ -12,14 +12,36 @@ interface WalletMetadata {
 }
 
 // Pure check for a WalletConnect peer metadata object — kept separate so it
-// can be unit tested without spinning up a wagmi connector. Matches both the
-// name ("Safe{Wallet}", "Safe Wallet", etc.) and the url (safe.global) so we
-// stay robust to Safe rebranding the metadata name.
+// can be unit tested without spinning up a wagmi connector. Match rules,
+// designed to exclude unrelated wallets that happen to have "safe" in their
+// name (SafePal, SafeMoon, Safeguard, etc.):
+//
+//   - url hosted under safe.global (or its subdomains) — strong signal,
+//     hard to spoof since the domain is controlled by Safe.
+//   - OR a name that exactly matches one of Safe's published wallet names
+//     (current "Safe{Wallet}", legacy "Safe Wallet", short "Safe", and the
+//     legacy "Safe Multisig" / "Gnosis Safe").
+//
+// Substring "safe" alone is NOT enough — it produced false positives for
+// SafePal & friends, which are EOAs and shouldn't skip receipt polling.
+const SAFE_NAME_PATTERN = /^(safe(\s*\{wallet\}|\s+wallet|\s+multisig)?|gnosis\s+safe)$/i
+
+// Hostname check rather than a substring match: rejects safe.global.attacker.com
+// while still accepting any subdomain Safe owns (app.safe.global, staging…).
+function isSafeGlobalUrl(rawUrl: string): boolean {
+  try {
+    const host = new URL(rawUrl).hostname.toLowerCase()
+    return host === 'safe.global' || host.endsWith('.safe.global')
+  } catch {
+    return false
+  }
+}
+
 export function isSafeByMetadata(meta: WalletMetadata | null | undefined): boolean {
   if (!meta) return false
-  const name = meta.name?.toLowerCase() ?? ''
-  const url = meta.url?.toLowerCase() ?? ''
-  return name.includes('safe') || url.includes('safe.global')
+  const name = meta.name?.trim() ?? ''
+  if (meta.url && isSafeGlobalUrl(meta.url)) return true
+  return SAFE_NAME_PATTERN.test(name)
 }
 
 // Synchronous fast path. Catches:

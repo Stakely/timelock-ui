@@ -23,7 +23,12 @@ import { isSafeByMetadata, isSafeConnectorSync } from '../lib/connectors'
 export function useIsSafeWallet(): boolean {
   const { connector: accountConnector } = useAccount()
   const connections = useConnections()
-  const liveConnector = connections[0]?.connector ?? accountConnector
+  // Match the active account's connector by uid. wagmi can hold multiple
+  // connections simultaneously (e.g. an injected wallet plus a WC session),
+  // so picking connections[0] would risk reading the wrong one.
+  const liveConnector =
+    connections.find((c) => c.connector.uid === accountConnector?.uid)?.connector ??
+    accountConnector
 
   const [isSafe, setIsSafe] = useState<boolean>(() => isSafeConnectorSync(accountConnector))
 
