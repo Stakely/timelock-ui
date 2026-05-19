@@ -32,7 +32,7 @@ export function Operations() {
     userAddress,
     timelock?.chainId,
   )
-  const { sync, isSyncing, syncResult, syncError } = useChainSync(
+  const { sync, isSyncing, syncResult, syncError, progress, cursor } = useChainSync(
     timelock?.address ?? null,
     timelock?.chainId,
     refresh,
@@ -153,6 +153,14 @@ export function Operations() {
               <CloudDownload size={13} />
               {isSyncing ? 'Scanning…' : 'Scan operations'}
             </button>
+            {isSyncing && progress && (
+              <p className="text-xs font-mono text-gray-500">{progress}</p>
+            )}
+            {!isSyncing && cursor > 0 && (
+              <p className="text-xs text-gray-600">
+                Last scanned: block {cursor.toLocaleString()}
+              </p>
+            )}
           </div>
           {roles.isProposer && (
             <button

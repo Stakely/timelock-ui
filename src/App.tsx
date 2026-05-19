@@ -130,7 +130,7 @@ export default function App() {
           </nav>
 
           <a
-              href="https://github.com/stakely/timelock-ui"
+              href="https://github.com/Stakely/timelock-ui"
               target="_blank"
               rel="noopener noreferrer"
               title="Source code on GitHub"
@@ -172,12 +172,21 @@ export default function App() {
               OZ Docs
             </a>
             <a
-              href="https://github.com/stakely/timelock-ui"
+              href="https://github.com/Stakely/timelock-ui"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-gray-200 transition-colors"
             >
               Contribute on GitHub
+            </a>
+            <a
+              href={`https://github.com/Stakely/timelock-ui/releases/tag/v${__APP_VERSION__}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="View release on GitHub"
+              className="text-gray-500 hover:text-gray-300 font-mono text-xs transition-colors"
+            >
+              v{__APP_VERSION__}
             </a>
           </div>
         </div>

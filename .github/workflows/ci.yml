@@ -24,30 +24,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.1
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '24'
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
-      # NOTE: `npm run lint` currently has 12 pre-existing errors unrelated
+      # NOTE: `pnpm lint` currently has 12 pre-existing errors unrelated
       # to the test/CI setup (mostly `any` types and `set-state-in-effect`
       # warnings). It runs but does not fail the build until those are
-      # cleaned up. Switch to `run: npm run lint` once they're fixed.
+      # cleaned up. Switch to `run: pnpm lint` once they're fixed.
       - name: Lint (non-blocking)
-        run: npm run lint || true
+        run: pnpm lint || true
 
       - name: Type-check
-        run: npm run typecheck
+        run: pnpm typecheck
 
       - name: Run tests
-        run: npm test
+        run: pnpm test
 
       - name: Build
-        run: npm run build
+        run: pnpm build
 
   docker:
     name: Build Docker image

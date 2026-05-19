@@ -5,8 +5,11 @@ FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+# Activate the pnpm version pinned by `packageManager` in package.json.
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 
@@ -17,7 +20,7 @@ COPY . .
 ARG VITE_WC_PROJECT_ID=""
 ENV VITE_WC_PROJECT_ID=${VITE_WC_PROJECT_ID}
 
-RUN npm run build
+RUN pnpm build
 
 # ─── Stage 2: runtime ───────────────────────────────────────────────────────
 FROM node:24-alpine AS runtime

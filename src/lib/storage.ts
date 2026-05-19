@@ -14,6 +14,10 @@ export interface StoredTimelock {
   address: `0x${string}`
   name: string
   chainId: number
+  // Block where the contract was deployed. Detected via getCode binary search
+  // when the timelock is saved. Used as the initial sync cursor so we don't
+  // scan from genesis. May be absent if the RPC didn't support historical state.
+  deployBlock?: number
 }
 
 // On-chain state: 0=Unset, 1=Waiting, 2=Ready, 3=Done

@@ -1,0 +1,15 @@
+# Pin paulmillr's `qr` to 0.5.5. Newer versions (0.6.0 at time of writing)
+# reject `border=0`, which is what RainbowKit's `cuer` dependency passes when
+# rendering the WalletConnect QR. Result: "Uncaught Error: invalid border=0"
+# in the connect modal. Until cuer/rainbowkit adapt to the new qr API, hold
+# the working version.
+overrides:
+  qr: 0.5.5
+
+# Explicitly deny build scripts for optional native modules pulled in by ws and
+# keccak transitives. They all have pure-JS fallbacks and we don't need the
+# compiled versions for a browser UI. This silences ERR_PNPM_IGNORED_BUILDS.
+allowBuilds:
+  bufferutil: false
+  keccak: false
+  utf-8-validate: false
