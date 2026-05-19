@@ -18,7 +18,7 @@ export function About() {
           contracts from a browser, with no backend and no setup. Connect your wallet, paste a contract address, and you're ready to schedule, monitor and execute operations.
           Run it locally or{' '}
           <a
-            href="https://github.com/stakely/timelock-ui"
+            href="https://github.com/Stakely/timelock-ui"
             target="_blank"
             rel="noopener noreferrer"
             className="text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-0.5"
@@ -94,7 +94,7 @@ export function About() {
 
       <div className="flex flex-wrap gap-3 pt-2">
         <a
-          href="https://github.com/stakely/timelock-ui"
+          href="https://github.com/Stakely/timelock-ui"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 px-4 py-2 border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-gray-100 rounded text-sm transition-colors"

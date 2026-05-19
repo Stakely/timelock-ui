@@ -208,7 +208,7 @@ export function OperationCard({ operation, explorerUrl, onPatched, onToast }: Pr
             <div className="bg-yellow-950/30 border border-yellow-800 rounded p-3 space-y-2">
               <p className="text-yellow-300 text-xs font-medium flex items-center gap-1">
                 <KeyRound size={12} />
-                Unknown salt — required to execute
+                Unknown salt, required to execute
               </p>
               <div className="flex gap-2">
                 <input

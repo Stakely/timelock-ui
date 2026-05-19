@@ -3,7 +3,8 @@ import { Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react'
 import { isAddress, createPublicClient, http, defineChain } from 'viem'
 import type { StoredTimelock } from '../lib/storage'
 import type { StoredNetwork } from '../lib/storage'
-import { shortHex } from '../lib/timelock'
+import { setSyncCursor } from '../lib/storage'
+import { shortHex, findDeployBlock } from '../lib/timelock'
 import { timelockAbi } from '../abis/timelock'
 
 interface Props {
@@ -31,6 +32,7 @@ export function SettingsTimelocks({
   const [editAddress, setEditAddress] = useState<`0x${string}` | null>(null)
   const [form, setForm] = useState<StoredTimelock>(EMPTY)
   const [validating, setValidating] = useState(false)
+  const [validatingLabel, setValidatingLabel] = useState('Validating…')
   const [validationError, setValidationError] = useState<string | null>(null)
 
   function openAdd() {
@@ -56,8 +58,14 @@ export function SettingsTimelocks({
   async function handleSave() {
     if (!form.name || !isAddress(form.address)) return
 
+    let toSave: StoredTimelock = form
+
     const addressChanged = editAddress === null || editAddress.toLowerCase() !== form.address.toLowerCase()
     if (addressChanged) {
+      // The deployBlock currently in `form` belongs to the previous address.
+      // Drop it; we'll only re-attach one if detection below succeeds.
+      toSave = { ...form, deployBlock: undefined }
+
       const network = networks.find((n) => n.chainId === form.chainId)
       if (network) {
         setValidating(true)
@@ -70,20 +78,35 @@ export function SettingsTimelocks({
             rpcUrls: { default: { http: [network.rpcUrl] } },
           })
           const client = createPublicClient({ chain, transport: http(network.rpcUrl) })
+
+          setValidatingLabel('Validating contract…')
           await client.readContract({ address: form.address, abi: timelockAbi, functionName: 'getMinDelay' })
+
+          // Locate the deploy block via address-filtered getLogs so the first
+          // chain sync doesn't start at 0. Best-effort: if the RPC rejects the
+          // wide-range query, findDeployBlock returns null and we proceed
+          // without setting a cursor.
+          setValidatingLabel('Locating deploy block…')
+          const deployBlock = await findDeployBlock(client, form.address)
+          if (deployBlock !== null) {
+            toSave = { ...form, deployBlock }
+            setSyncCursor(form.chainId, form.address, deployBlock)
+          }
         } catch {
           setValidationError('Not a valid TimelockController — getMinDelay() reverted or timed out')
           setValidating(false)
+          setValidatingLabel('Validating…')
           return
         }
         setValidating(false)
+        setValidatingLabel('Validating…')
       }
     }
 
     if (editAddress !== null) {
-      onUpdate(editAddress, form)
+      onUpdate(editAddress, toSave)
     } else {
-      onAdd(form)
+      onAdd(toSave)
     }
     closeForm()
   }
@@ -109,6 +132,7 @@ export function SettingsTimelocks({
           isEdit={editAddress !== null}
           networks={networks}
           validating={validating}
+          validatingLabel={validatingLabel}
           validationError={validationError}
           onChange={setForm}
           onSave={handleSave}
@@ -155,6 +179,7 @@ function TimelockForm({
   isEdit,
   networks,
   validating,
+  validatingLabel,
   validationError,
   onChange,
   onSave,
@@ -164,6 +189,7 @@ function TimelockForm({
   isEdit: boolean
   networks: StoredNetwork[]
   validating: boolean
+  validatingLabel: string
   validationError: string | null
   onChange: (tl: StoredTimelock) => void
   onSave: () => void
@@ -188,7 +214,8 @@ function TimelockForm({
           <select
             value={form.chainId}
             onChange={(e) => onChange({ ...form, chainId: Number(e.target.value) })}
-            className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-sm text-gray-100 focus:outline-none focus:border-indigo-500"
+            disabled={isEdit}
+            className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-sm text-gray-100 focus:outline-none focus:border-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {networks.map((n) => (
               <option key={n.chainId} value={n.chainId}>
@@ -196,6 +223,11 @@ function TimelockForm({
               </option>
             ))}
           </select>
+          {isEdit && (
+            <p className="text-xs text-gray-500 mt-1">
+              Network is fixed. Delete and re-add to point to a different chain.
+            </p>
+          )}
         </div>
         <div className="col-span-2">
           <label className="text-xs text-gray-400 block mb-1">Contract address</label>
@@ -220,7 +252,7 @@ function TimelockForm({
         </button>
         <button onClick={onSave} disabled={validating} className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed">
           {validating ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-          {validating ? 'Validating…' : 'Save'}
+          {validating ? validatingLabel : 'Save'}
         </button>
       </div>
     </div>

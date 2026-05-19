@@ -1,4 +1,5 @@
 import { keccak256, toBytes, encodeAbiParameters, parseAbiParameters } from 'viem'
+import type { PublicClient } from 'viem'
 
 // On-chain state for the OZ TimelockController
 export const OperationState = {
@@ -97,4 +98,50 @@ export function explorerTxUrl(explorerUrl: string, txHash: string): string {
 // Explorer URL for an address
 export function explorerAddressUrl(explorerUrl: string, address: string): string {
   return `${explorerUrl.replace(/\/$/, '')}/address/${address}`
+}
+
+// Locates the deploy block of `address` by finding the smallest block where it
+// has ever emitted a log. For OpenZeppelin TimelockController this is reliable:
+// the constructor always emits RoleGranted (≥1) and MinDelayChange, so the
+// deploy block itself has logs.
+//
+// Why logs and not eth_getCode binary search: getCode needs the state trie at
+// past blocks, which only archive nodes keep — most public/free RPCs are
+// non-archive and reject it. Logs live in the receipts index, which virtually
+// all RPCs retain forever. Address-filtered getLogs queries are also typically
+// accepted over very wide ranges because the result set is bounded by the
+// contract's actual activity, not by the block range.
+//
+// Returns null on RPC failure (after 3 retries) or if the address has no logs.
+// When that happens the caller should leave the sync cursor at 0 — narrowing
+// the range would only give an upper bound and risk missing earlier operations.
+export async function findDeployBlock(
+  client: PublicClient,
+  address: `0x${string}`,
+): Promise<number | null> {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const latest = await client.getBlockNumber()
+      const logs = await client.getLogs({
+        address,
+        fromBlock: 0n,
+        toBlock: latest,
+      })
+      if (logs.length === 0) return null
+
+      let min: bigint | null = null
+      for (const log of logs) {
+        if (log.blockNumber !== null && (min === null || log.blockNumber < min)) {
+          min = log.blockNumber
+        }
+      }
+      return min !== null ? Number(min) : null
+    } catch (e) {
+      console.warn(`[find-deploy-block] attempt ${attempt}/3 failed`, e)
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, 200 * attempt))
+      }
+    }
+  }
+  return null
 }
