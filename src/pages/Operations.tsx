@@ -42,7 +42,13 @@ export function Operations() {
 
   useEffect(() => {
     if (location.state?.scheduledOk) {
-      setToast({ message: 'Operation scheduled successfully', type: 'success' })
+      const needsSafe = Boolean(location.state.needsSafeSignatures)
+      setToast({
+        message: needsSafe
+          ? 'Operation sent to Safe. Confirm signatures at app.safe.global to schedule on-chain.'
+          : 'Operation scheduled successfully',
+        type: needsSafe ? 'info' : 'success',
+      })
       navigate('/', { replace: true, state: {} })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

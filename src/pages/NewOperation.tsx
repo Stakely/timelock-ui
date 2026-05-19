@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { OperationForm } from '../components/OperationForm'
@@ -18,34 +17,6 @@ export function NewOperation() {
     userAddress,
     activeTimelock?.chainId,
   )
-
-  // Latch: once we've confirmed the wallet has PROPOSER_ROLE and read a
-  // minDelay, hold on to those values. A flaky RPC can make hasRole/getMinDelay
-  // briefly return error/false on a refetch, and we don't want that to unmount
-  // the form (which would wipe everything the user typed).
-  const [confirmedProposer, setConfirmedProposer] = useState(false)
-  const [stableMinDelay, setStableMinDelay] = useState<bigint | null>(null)
-
-  // The latch is scoped to (wallet, timelock, chain). When any of those change
-  // the previous confirmation no longer applies — a different wallet may not
-  // have the role, a different timelock has its own AccessControl state, and
-  // a different chain queries a different contract entirely. Reset during
-  // render so the next paint already reflects the new session.
-  const sessionKey = `${userAddress ?? ''}|${activeTimelock?.address ?? ''}|${activeTimelock?.chainId ?? ''}`
-  const [prevSessionKey, setPrevSessionKey] = useState(sessionKey)
-  if (prevSessionKey !== sessionKey) {
-    setPrevSessionKey(sessionKey)
-    setConfirmedProposer(false)
-    setStableMinDelay(null)
-  }
-
-  useEffect(() => {
-    if (roles.isProposer) setConfirmedProposer(true)
-  }, [roles.isProposer])
-
-  useEffect(() => {
-    if (minDelay !== null) setStableMinDelay(minDelay)
-  }, [minDelay])
 
   if (!activeTimelock) {
     return (
@@ -69,10 +40,7 @@ export function NewOperation() {
     )
   }
 
-  // Don't show the "no PROPOSER_ROLE" warning while we're still loading, and
-  // don't show it after a successful confirmation — only show it if we've
-  // received a response and it confirmed the role is missing.
-  if (isLoading && !confirmedProposer) {
+  if (isLoading && !roles.isProposer) {
     return (
       <div className="py-8">
         <p className="text-gray-400">Checking permissions…</p>
@@ -80,7 +48,7 @@ export function NewOperation() {
     )
   }
 
-  if (!roles.isProposer && !confirmedProposer) {
+  if (!roles.isProposer) {
     return (
       <div className="py-8">
         <p className="text-yellow-400">
@@ -90,8 +58,6 @@ export function NewOperation() {
       </div>
     )
   }
-
-  const effectiveMinDelay = stableMinDelay ?? minDelay
 
   return (
     <div className="py-8 space-y-6">
@@ -106,8 +72,8 @@ export function NewOperation() {
           <h1 className="text-xl font-bold text-gray-100">New operation</h1>
           <p className="text-sm text-gray-500">
             {activeTimelock.name} ·{' '}
-            {effectiveMinDelay !== null
-              ? `minDelay: ${effectiveMinDelay}s (${formatDelay(effectiveMinDelay)})`
+            {minDelay !== null
+              ? `minDelay: ${minDelay}s (${formatDelay(minDelay)})`
               : '…'}
           </p>
         </div>
@@ -117,8 +83,15 @@ export function NewOperation() {
         <OperationForm
           timelockAddress={activeTimelock.address}
           chainId={activeTimelock.chainId}
-          minDelay={effectiveMinDelay ?? 0n}
-          onScheduled={() => navigate('/', { state: { scheduledOk: true } })}
+          minDelay={minDelay ?? 0n}
+          onScheduled={(opts) =>
+            navigate('/', {
+              state: {
+                scheduledOk: true,
+                needsSafeSignatures: opts?.needsSafeSignatures ?? false,
+              },
+            })
+          }
           onCancel={() => navigate('/')}
         />
       </div>

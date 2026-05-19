@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useReadContracts } from 'wagmi'
 import { timelockAbi } from '../abis/timelock'
 import { ROLE_HASHES, type RoleName } from '../lib/timelock'
@@ -7,6 +8,13 @@ export interface TimelockRoles {
   isExecutor: boolean
   isCanceller: boolean
   isAdmin: boolean
+}
+
+const EMPTY_ROLES: TimelockRoles = {
+  isProposer: false,
+  isExecutor: false,
+  isCanceller: false,
+  isAdmin: false,
 }
 
 export function useTimelockRoles(
@@ -40,25 +48,53 @@ export function useTimelockRoles(
     query: { enabled },
   })
 
-  if (!data || !enabled) {
-    return {
-      roles: { isProposer: false, isExecutor: false, isCanceller: false, isAdmin: false },
-      isLoading,
-      minDelay: null,
-    }
+  // Per-field latch: each role/minDelay keeps its last *successful* read.
+  // A failed re-read (RPC hiccup, common on mainnet with Safe) leaves the
+  // latch untouched instead of flipping a confirmed-true role to false and
+  // making the New operation / Execute / Cancel buttons flicker out.
+  // The latch is scoped to (user, timelock, chain) and reset when that tuple
+  // changes, since a different access-control context is a different question.
+  const sessionKey = `${userAddress ?? ''}|${timelockAddress ?? ''}|${chainId ?? ''}`
+  const [prevSessionKey, setPrevSessionKey] = useState(sessionKey)
+  const [latchedRoles, setLatchedRoles] = useState<TimelockRoles>(EMPTY_ROLES)
+  const [latchedMinDelay, setLatchedMinDelay] = useState<bigint | null>(null)
+  if (prevSessionKey !== sessionKey) {
+    setPrevSessionKey(sessionKey)
+    setLatchedRoles(EMPTY_ROLES)
+    setLatchedMinDelay(null)
   }
 
-  const [proposer, executor, canceller, admin, minDelayResult] = data
+  useEffect(() => {
+    if (!data) return
+    setLatchedRoles((prev) => {
+      const next: TimelockRoles = {
+        isProposer: data[0]?.status === 'success' ? (data[0].result as boolean) : prev.isProposer,
+        isExecutor: data[1]?.status === 'success' ? (data[1].result as boolean) : prev.isExecutor,
+        isCanceller: data[2]?.status === 'success' ? (data[2].result as boolean) : prev.isCanceller,
+        isAdmin: data[3]?.status === 'success' ? (data[3].result as boolean) : prev.isAdmin,
+      }
+      if (
+        next.isProposer === prev.isProposer &&
+        next.isExecutor === prev.isExecutor &&
+        next.isCanceller === prev.isCanceller &&
+        next.isAdmin === prev.isAdmin
+      ) {
+        return prev
+      }
+      return next
+    })
+    if (data[4]?.status === 'success') {
+      setLatchedMinDelay(data[4].result as bigint)
+    }
+  }, [data])
+
+  if (!enabled) {
+    return { roles: EMPTY_ROLES, isLoading, minDelay: null }
+  }
 
   return {
-    roles: {
-      isProposer: proposer?.status === 'success' ? (proposer.result as boolean) : false,
-      isExecutor: executor?.status === 'success' ? (executor.result as boolean) : false,
-      isCanceller: canceller?.status === 'success' ? (canceller.result as boolean) : false,
-      isAdmin: admin?.status === 'success' ? (admin.result as boolean) : false,
-    },
+    roles: latchedRoles,
     isLoading,
-    minDelay:
-      minDelayResult?.status === 'success' ? (minDelayResult.result as bigint) : null,
+    minDelay: latchedMinDelay,
   }
 }

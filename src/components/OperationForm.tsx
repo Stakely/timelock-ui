@@ -6,13 +6,15 @@ import { timelockAbi } from '../abis/timelock'
 import { hashOperation, generateSalt, formatDelay } from '../lib/timelock'
 import { parseMethodSignature, encodeCalldata, type ParsedParam } from '../lib/abi-parser'
 import { upsertOperation, type StoredOperation } from '../lib/storage'
+import { RECEIPT_TIMEOUT_MS } from '../lib/connectors'
+import { useIsSafeWallet } from '../hooks/useIsSafeWallet'
 import { Toast } from './Toast'
 
 interface Props {
   timelockAddress: `0x${string}`
   chainId: number
   minDelay: bigint
-  onScheduled: () => void
+  onScheduled: (opts?: { needsSafeSignatures?: boolean }) => void
   onCancel: () => void
 }
 
@@ -20,6 +22,7 @@ export function OperationForm({ timelockAddress, chainId, minDelay, onScheduled,
   const { address: userAddress } = useAccount()
   const client = usePublicClient()
   const { writeContractAsync, isPending } = useWriteContract()
+  const safeFlow = useIsSafeWallet()
 
   // ─── Form state ───────────────────────────────────────────────────────────
   const [target, setTarget] = useState('')
@@ -120,7 +123,23 @@ export function OperationForm({ timelockAddress, chainId, minDelay, onScheduled,
       }
 
       upsertOperation(op)
-      await client?.waitForTransactionReceipt({ hash })
+
+      // Safe returns a Safe-tx-hash, not an Ethereum tx hash, so waiting for
+      // a receipt would hang forever. Skip the wait and let the user track
+      // the multisig in the Safe UI. The operation is already saved locally,
+      // and the chain scan will pick up the on-chain tx once signers execute.
+      if (safeFlow) {
+        onScheduled({ needsSafeSignatures: true })
+        return
+      }
+
+      try {
+        await client?.waitForTransactionReceipt({ hash, timeout: RECEIPT_TIMEOUT_MS })
+      } catch {
+        // Timeout or transient RPC error — the schedule TX may still confirm
+        // later. The op is stored with its scheduleTxHash so the user can
+        // verify in the explorer; better to release the UI than freeze it.
+      }
       onScheduled()
     } catch (e: any) {
       setTxError(e?.shortMessage ?? e?.message ?? 'Unknown error')
@@ -277,7 +296,15 @@ export function OperationForm({ timelockAddress, chainId, minDelay, onScheduled,
           disabled={isSubmitting || !userAddress}
           className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded font-medium"
         >
-          {isPending ? 'Signing…' : isSubmitting ? 'Confirming…' : 'Schedule operation'}
+          {isPending
+            ? 'Signing…'
+            : isSubmitting
+              ? safeFlow
+                ? 'Sending to Safe…'
+                : 'Confirming…'
+              : safeFlow
+                ? 'Schedule via Safe'
+                : 'Schedule operation'}
         </button>
         <button
           type="button"
