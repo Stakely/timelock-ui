@@ -14,7 +14,7 @@ interface Props {
   timelockAddress: `0x${string}`
   chainId: number
   minDelay: bigint
-  onScheduled: (opts?: { needsSafeSignatures?: boolean }) => void
+  onScheduled: (opts?: { needsSafeSignatures?: boolean; receiptPending?: boolean }) => void
   onCancel: () => void
 }
 
@@ -137,14 +137,16 @@ export function OperationForm({ timelockAddress, chainId, minDelay, onScheduled,
         return
       }
 
+      // Wait for the schedule TX to confirm. On timeout or transient RPC
+      // error we don't *know* whether the TX landed — it may still confirm,
+      // it may have been dropped or replaced. Report that uncertainty to
+      // the user instead of claiming success.
       try {
         await client?.waitForTransactionReceipt({ hash, timeout: RECEIPT_TIMEOUT_MS })
+        onScheduled()
       } catch {
-        // Timeout or transient RPC error — the schedule TX may still confirm
-        // later. The op is stored with its scheduleTxHash so the user can
-        // verify in the explorer; better to release the UI than freeze it.
+        onScheduled({ receiptPending: true })
       }
-      onScheduled()
     } catch (e: any) {
       setTxError(e?.shortMessage ?? e?.message ?? 'Unknown error')
       setIsSubmitting(false)

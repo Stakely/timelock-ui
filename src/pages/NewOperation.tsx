@@ -89,6 +89,7 @@ export function NewOperation() {
               state: {
                 scheduledOk: true,
                 needsSafeSignatures: opts?.needsSafeSignatures ?? false,
+                receiptPending: opts?.receiptPending ?? false,
               },
             })
           }
