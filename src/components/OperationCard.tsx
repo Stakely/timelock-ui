@@ -7,6 +7,8 @@ import { useOperationState } from '../hooks/useOperationState'
 import { useTimelockRoles } from '../hooks/useTimelockRoles'
 import { timelockAbi } from '../abis/timelock'
 import { OperationState, shortHex, explorerTxUrl, explorerAddressUrl, hashOperation } from '../lib/timelock'
+import { RECEIPT_TIMEOUT_MS } from '../lib/connectors'
+import { useIsSafeWallet } from '../hooks/useIsSafeWallet'
 import type { StoredOperation } from '../lib/storage'
 
 interface Props {
@@ -23,6 +25,7 @@ export function OperationCard({ operation, explorerUrl, onPatched, onToast }: Pr
   const [saltError, setSaltError] = useState<string | null>(null)
   const { address: userAddress } = useAccount()
   const client = usePublicClient({ chainId: operation.chainId })
+  const safeFlow = useIsSafeWallet()
 
   const { data: onChain, isLoading, refetch } = useOperationState(
     operation.timelockAddress,
@@ -76,11 +79,33 @@ export function OperationCard({ operation, explorerUrl, onPatched, onToast }: Pr
         value: BigInt(operation.value),
         chainId: operation.chainId,
       })
-      onPatched(operation.id, { executeTxHash: hash })
+      // Only persist a real Ethereum tx hash. The Safe flow returns a
+      // Safe-tx-hash that would render as a broken explorer link; the
+      // on-chain hash will be picked up by the chain scan after signers
+      // execute the multisig.
+      if (!safeFlow) {
+        onPatched(operation.id, { executeTxHash: hash })
+      }
+
+      if (safeFlow) {
+        onToast({
+          message: 'Execute sent to Safe. Confirm signatures at app.safe.global to broadcast on-chain.',
+          type: 'info',
+        })
+        return
+      }
+
       setTxPending(true)
-      await client?.waitForTransactionReceipt({ hash })
+      try {
+        await client?.waitForTransactionReceipt({ hash, timeout: RECEIPT_TIMEOUT_MS })
+        onToast({ message: 'Operation executed successfully', type: 'success' })
+      } catch {
+        onToast({
+          message: 'Execute submitted but receipt not seen yet. Check the explorer in a moment.',
+          type: 'info',
+        })
+      }
       refetch()
-      onToast({ message: 'Operation executed successfully', type: 'success' })
     } catch (e: any) {
       onToast({ message: e?.shortMessage ?? e?.message ?? 'Unknown error', type: 'error' })
     } finally {
@@ -97,11 +122,31 @@ export function OperationCard({ operation, explorerUrl, onPatched, onToast }: Pr
         args: [operation.id],
         chainId: operation.chainId,
       })
-      onPatched(operation.id, { cancelTxHash: hash })
+      // See execute: avoid storing a Safe-tx-hash in a field rendered as an
+      // explorer link.
+      if (!safeFlow) {
+        onPatched(operation.id, { cancelTxHash: hash })
+      }
+
+      if (safeFlow) {
+        onToast({
+          message: 'Cancel sent to Safe. Confirm signatures at app.safe.global to broadcast on-chain.',
+          type: 'info',
+        })
+        return
+      }
+
       setTxPending(true)
-      await client?.waitForTransactionReceipt({ hash })
+      try {
+        await client?.waitForTransactionReceipt({ hash, timeout: RECEIPT_TIMEOUT_MS })
+        onToast({ message: 'Operation cancelled', type: 'info' })
+      } catch {
+        onToast({
+          message: 'Cancel submitted but receipt not seen yet. Check the explorer in a moment.',
+          type: 'info',
+        })
+      }
       refetch()
-      onToast({ message: 'Operation cancelled', type: 'info' })
     } catch (e: any) {
       onToast({ message: e?.shortMessage ?? e?.message ?? 'Unknown error', type: 'error' })
     } finally {
@@ -165,7 +210,9 @@ export function OperationCard({ operation, explorerUrl, onPatched, onToast }: Pr
                   ? <Loader2 size={14} className="animate-spin" />
                   : <Play size={14} />
                 }
-                {isPending ? 'Confirm in wallet…' : txPending ? 'Waiting…' : 'Execute'}
+                {isPending
+                  ? safeFlow ? 'Sending to Safe…' : 'Confirm in wallet…'
+                  : txPending ? 'Waiting…' : 'Execute'}
               </button>
             ) : (
               <button
@@ -188,7 +235,9 @@ export function OperationCard({ operation, explorerUrl, onPatched, onToast }: Pr
                 ? <Loader2 size={14} className="animate-spin" />
                 : <X size={14} />
               }
-              {isPending ? 'Confirm…' : txPending ? 'Waiting…' : 'Cancel'}
+              {isPending
+                ? safeFlow ? 'Sending to Safe…' : 'Confirm…'
+                : txPending ? 'Waiting…' : 'Cancel'}
             </button>
           )}
           <button

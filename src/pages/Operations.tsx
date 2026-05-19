@@ -42,7 +42,21 @@ export function Operations() {
 
   useEffect(() => {
     if (location.state?.scheduledOk) {
-      setToast({ message: 'Operation scheduled successfully', type: 'success' })
+      const needsSafe = Boolean(location.state.needsSafeSignatures)
+      const receiptPending = Boolean(location.state.receiptPending)
+      let message: string
+      let type: 'info' | 'success'
+      if (needsSafe) {
+        message = 'Operation sent to Safe. Confirm signatures at app.safe.global to schedule on-chain.'
+        type = 'info'
+      } else if (receiptPending) {
+        message = 'Schedule submitted but receipt not seen yet. Check the explorer in a moment.'
+        type = 'info'
+      } else {
+        message = 'Operation scheduled successfully'
+        type = 'success'
+      }
+      setToast({ message, type })
       navigate('/', { replace: true, state: {} })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
