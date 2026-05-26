@@ -112,6 +112,24 @@ All state lives in `localStorage` under the `tl-ui:*` namespace:
 
 Clearing site data resets the app completely.
 
+## Usage analytics (Umami)
+
+The app can send anonymous usage analytics to [Umami](https://umami.is/), an open-source, privacy-friendly alternative to Google Analytics.
+
+To enable it, set the following variables:
+
+```properties
+VITE_ENABLE_ANALYTICS="true"
+VITE_UMAMI_PROJECT_ID="umami-project-id"
+VITE_UMAMI_URL="link-to-umami-js-script"
+```
+
+| Variable | Description |
+|---|---|
+| `VITE_ENABLE_ANALYTICS` | Toggles analytics on or off. Set to `"true"` to enable; leave unset or `"false"` to disable. |
+| `VITE_UMAMI_PROJECT_ID` | Project ID from your Umami dashboard. |
+| `VITE_UMAMI_URL` | URL from which the Umami tracking script is loaded. |
+
 ## Contributing
 
 Pull requests are welcome. The codebase is small and self-contained: no Solidity, no backend, just a frontend talking to the chain through viem.
