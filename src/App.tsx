@@ -180,6 +180,14 @@ export default function App() {
               Contribute on GitHub
             </a>
             <a
+              href="https://stakely.io/resources/contact-us"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gray-200 transition-colors"
+            >
+              Get in touch
+            </a>
+            <a
               href={`https://github.com/Stakely/timelock-ui/releases/tag/v${__APP_VERSION__}`}
               target="_blank"
               rel="noopener noreferrer"
