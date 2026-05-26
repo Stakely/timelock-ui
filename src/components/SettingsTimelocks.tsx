@@ -6,6 +6,7 @@ import type { StoredNetwork } from '../lib/storage'
 import { setSyncCursor } from '../lib/storage'
 import { shortHex, findDeployBlock } from '../lib/timelock'
 import { timelockAbi } from '../abis/timelock'
+import { useAnalytics } from '../analytics/analytics'
 
 interface Props {
   timelocks: StoredTimelock[]
@@ -28,6 +29,9 @@ export function SettingsTimelocks({
   onRemove,
   onSelect,
 }: Props) {
+
+  const {sendEvent} = useAnalytics();
+
   const [showForm, setShowForm] = useState(false)
   const [editAddress, setEditAddress] = useState<`0x${string}` | null>(null)
   const [form, setForm] = useState<StoredTimelock>(EMPTY)
@@ -36,6 +40,7 @@ export function SettingsTimelocks({
   const [validationError, setValidationError] = useState<string | null>(null)
 
   function openAdd() {
+    sendEvent('add_timelock_button_clicked');
     setForm({ ...EMPTY, chainId: networks[0]?.chainId ?? 1 })
     setEditAddress(null)
     setValidationError(null)
@@ -58,6 +63,7 @@ export function SettingsTimelocks({
   async function handleSave() {
     if (!form.name || !isAddress(form.address)) return
 
+    sendEvent('save_timelock_button_clicked');
     let toSave: StoredTimelock = form
 
     const addressChanged = editAddress === null || editAddress.toLowerCase() !== form.address.toLowerCase()

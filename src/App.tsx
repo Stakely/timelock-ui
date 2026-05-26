@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { useChainId, useSwitchChain } from 'wagmi'
+import { useAccount, useChainId, useSwitchChain } from 'wagmi'
 import { Settings2, List, Info, Wallet } from 'lucide-react'
 import { Operations } from './pages/Operations'
 import { NewOperation } from './pages/NewOperation'
@@ -11,6 +11,7 @@ import { NetworkSelector } from './components/NetworkSelector'
 import { TimelockSelector } from './components/TimelockSelector'
 import { useTimelockStore } from './contexts/timelocks'
 import { useNetworks } from './hooks/useNetworks'
+import { useAnalytics } from './analytics/analytics'
 
 function WalletButton() {
   return (
@@ -46,9 +47,11 @@ function WalletButton() {
 
 export default function App() {
   const { timelocks, activeAddress, selectTimelock } = useTimelockStore()
+  const {address} = useAccount();
   const { networks } = useNetworks()
   const walletChainId = useChainId()
   const { switchChain } = useSwitchChain()
+  const {sendEvent} = useAnalytics();
 
   const visibleTimelocks = timelocks.filter((t) => t.chainId === walletChainId)
 
@@ -62,6 +65,14 @@ export default function App() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletChainId])
+
+  useEffect(() => {
+    if (!address) {
+      return;
+    }
+
+    sendEvent('wallet_connected');
+  }, [address]);
 
   const handleSelectNetwork = useCallback(
     (chainId: number) => switchChain({ chainId }),
