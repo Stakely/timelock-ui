@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, Pencil, Trash2, Check, X } from 'lucide-react'
 import type { StoredNetwork } from '../lib/storage'
+import { useAnalytics } from '../analytics/analytics'
 
 interface Props {
   networks: StoredNetwork[]
@@ -18,11 +19,14 @@ const EMPTY: StoredNetwork = {
 }
 
 export function SettingsNetworks({ networks, onAdd, onUpdate, onRemove }: Props) {
+  const {sendEvent} = useAnalytics();
+
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState<StoredNetwork>(EMPTY)
 
   function openAdd() {
+    sendEvent('add_network_button_clicked');
     setForm(EMPTY)
     setEditId(null)
     setShowForm(true)
@@ -41,6 +45,9 @@ export function SettingsNetworks({ networks, onAdd, onUpdate, onRemove }: Props)
 
   function handleSave() {
     if (!form.name || !form.rpcUrl || form.chainId <= 0) return
+    
+    sendEvent('save_network_button_clicked');
+
     if (editId !== null) {
       onUpdate(editId, form)
     } else {

@@ -75,6 +75,9 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VITE_WC_PROJECT_ID=${{ secrets.VITE_WC_PROJECT_ID }}
+            VITE_ENABLE_ANALYTICS=${{ secrets.VITE_ENABLE_ANALYTICS }}
+            VITE_UMAMI_PROJECT_ID=${{ secrets.VITE_UMAMI_PROJECT_ID }}
+            VITE_UMAMI_URL=${{ secrets.VITE_UMAMI_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
