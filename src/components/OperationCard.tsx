@@ -10,6 +10,7 @@ import { OperationState, shortHex, explorerTxUrl, explorerAddressUrl, hashOperat
 import { RECEIPT_TIMEOUT_MS } from '../lib/connectors'
 import { useIsSafeWallet } from '../hooks/useIsSafeWallet'
 import type { StoredOperation } from '../lib/storage'
+import { useAnalytics } from '../analytics/analytics'
 
 interface Props {
   operation: StoredOperation
@@ -34,6 +35,7 @@ export function OperationCard({ operation, explorerUrl, onPatched, onToast }: Pr
   )
   const { roles } = useTimelockRoles(operation.timelockAddress, userAddress, operation.chainId)
   const { writeContractAsync, isPending } = useWriteContract()
+  const {sendEvent} = useAnalytics();
 
   const state = onChain?.state ?? 0
   const readyAt = onChain?.readyAt ?? 0n
@@ -46,6 +48,7 @@ export function OperationCard({ operation, explorerUrl, onPatched, onToast }: Pr
       setSaltError('Invalid salt: must be 0x followed by 64 hex characters')
       return
     }
+    sendEvent('save_salt_button_clicked');
     // Verificar que el salt cuadra con el operation ID
     const computed = hashOperation(
       operation.target,
@@ -64,6 +67,7 @@ export function OperationCard({ operation, explorerUrl, onPatched, onToast }: Pr
 
   async function handleExecute() {
     if (!operation.salt) return
+    sendEvent('execute_button_clicked');
     try {
       const hash = await writeContractAsync({
         address: operation.timelockAddress,
