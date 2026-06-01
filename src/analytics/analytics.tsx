@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 
 type AnalyticsContextType = {
   sendEvent: (event: string, data?: Record<string, string>) => void;
@@ -14,7 +14,7 @@ type UmamiWindow = Window & {
     | undefined;
 };
 
-export const AnalyticsProvider = ({ children }: { children }) => {
+export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
   const enabled: boolean = import.meta.env.VITE_ENABLE_ANALYTICS === "true";
 
   useEffect(() => {
