@@ -2,7 +2,7 @@ import { useCallback, useEffect } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { useAccount, useChainId, useSwitchChain } from 'wagmi'
-import { Settings2, List, Info, Wallet } from 'lucide-react'
+import { Settings2, List, Info, Wallet, File } from 'lucide-react'
 import { Operations } from './pages/Operations'
 import { NewOperation } from './pages/NewOperation'
 import { Settings } from './pages/Settings'
@@ -138,6 +138,12 @@ export default function App() {
               <Info size={15} />
               About
             </NavLink>
+              <NavLink
+              to="https://docs.openzeppelin.com/contracts/5.x/api/governance#TimelockController"
+              className="flex items-center gap-1 px-3 py-1.5 rounded text-sm text-gray-400 hover:text-gray-200">
+              <File size={15} />
+              OZ Docs
+            </NavLink>
           </nav>
 
           <a
@@ -165,50 +171,58 @@ export default function App() {
         </Routes>
       </main>
 
-      <footer className="border-t border-gray-800 py-5 text-sm text-gray-400">
-        <div className="max-w-5xl mx-auto px-4 flex items-center justify-between gap-4 flex-wrap">
-          <a href="https://stakely.io" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity shrink-0">
-            <img src="https://img.stakely.io/brand-kit/full-logo/dark/full_logo_dark.svg" alt="Stakely" className="h-5" />
-          </a>
-          <div className="flex items-center gap-5 flex-wrap">
-            <NavLink to="/about" className={({ isActive }) => isActive ? 'text-gray-200' : 'hover:text-gray-200 transition-colors'}>
-              About
-            </NavLink>
-            <a
-              href="https://docs.openzeppelin.com/contracts/5.x/api/governance#TimelockController"
+      <footer className="py-4 text-sm text-gray-400 flex space-between items-center px-4" style={{
+        background: 'rgba(255,255,255, 0.1)',
+        backdropFilter: 'blur(10px)',
+      }}>
+        <div className='w-[30%]'/>
+        <div className="px-4 flex items-center justify-center gap-4 text-white w-[40%] text-base">
+          <div className="flex items-center gap-1 whitespace-nowrap">
+            <span>
+              Built by             <a
+              href="https://stakely.io"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-gray-200 transition-colors"
+              className="underline whitespace-nowrap"
             >
-              OZ Docs
+              Stakely
             </a>
+            </span>
+            -
             <a
-              href="https://github.com/Stakely/timelock-ui"
+              href="https://stakely.io/es/staking/ethereum-staking"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-gray-200 transition-colors"
+              className="underline whitespace-nowrap"
             >
-              Contribute on GitHub
+              Stake with us
             </a>
+            -
             <a
               href="https://stakely.io/resources/contact-us"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-gray-200 transition-colors"
+              className="underline whitespace-nowrap"
             >
               Get in touch
             </a>
-            <a
-              href={`https://github.com/Stakely/timelock-ui/releases/tag/v${__APP_VERSION__}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="View release on GitHub"
-              className="text-gray-500 hover:text-gray-300 font-mono text-xs transition-colors"
-            >
-              v{__APP_VERSION__}
-            </a>
           </div>
+            <a href="https://stakely.io" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity shrink-0">
+            <img src="https://img.stakely.io/brand-kit/full-logo/dark/full_logo_dark.svg" alt="Stakely" className="h-5" />
+          </a>
         </div>
+        <a
+            href={`https://github.com/Stakely/timelock-ui/releases/tag/v${__APP_VERSION__}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View release on GitHub"
+            className="text-gray-500 hover:text-gray-300 font-mono text-xs transition-colors ml-2 w-[30%]"
+            style={{
+              textAlign: 'right'
+            }}
+          >
+            v{__APP_VERSION__}
+        </a>
       </footer>
     </div>
   )
