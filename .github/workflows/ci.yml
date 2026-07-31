@@ -27,7 +27,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 11.1.1
+          version: 11.18.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -38,10 +38,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # NOTE: `pnpm lint` currently has 12 pre-existing errors unrelated
-      # to the test/CI setup (mostly `any` types and `set-state-in-effect`
-      # warnings). It runs but does not fail the build until those are
-      # cleaned up. Switch to `run: pnpm lint` once they're fixed.
+      # NOTE: `pnpm lint` currently has 21 pre-existing errors unrelated
+      # to the test/CI setup (10 `any` types, 7 `set-state-in-effect`, the
+      # rest split across exhaustive-deps, immutability and
+      # only-export-components). It runs but does not fail the build until
+      # those are cleaned up. Switch to `run: pnpm lint` once they're fixed.
       - name: Lint (non-blocking)
         run: pnpm lint || true
 
