@@ -9,6 +9,7 @@ import './index.css'
 import App from './App.tsx'
 import { buildWagmiConfig } from './lib/wagmi'
 import { TimelockProvider } from './contexts/timelocks'
+import { AnalyticsProvider } from './analytics/analytics.tsx'
 
 const wagmiConfig = buildWagmiConfig()
 const queryClient = new QueryClient()
@@ -19,9 +20,11 @@ createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider theme={darkTheme()}>
           <BrowserRouter>
-            <TimelockProvider>
-              <App />
+            <AnalyticsProvider>
+              <TimelockProvider>
+                <App />
             </TimelockProvider>
+            </AnalyticsProvider>
           </BrowserRouter>
         </RainbowKitProvider>
       </QueryClientProvider>

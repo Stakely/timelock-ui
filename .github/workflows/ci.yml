@@ -38,10 +38,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # NOTE: `pnpm lint` currently has 18 pre-existing errors unrelated
-      # to the test/CI setup (10 `any` types, the rest `set-state-in-effect`).
-      # It runs but does not fail the build until those are cleaned up.
-      # Switch to `run: pnpm lint` once they're fixed.
+      # NOTE: `pnpm lint` currently has 21 pre-existing errors unrelated
+      # to the test/CI setup (10 `any` types, 7 `set-state-in-effect`, the
+      # rest split across exhaustive-deps, immutability and
+      # only-export-components). It runs but does not fail the build until
+      # those are cleaned up. Switch to `run: pnpm lint` once they're fixed.
       - name: Lint (non-blocking)
         run: pnpm lint || true
 

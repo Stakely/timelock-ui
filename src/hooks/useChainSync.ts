@@ -8,6 +8,7 @@ import {
   setSyncCursor,
   type StoredOperation,
 } from '../lib/storage'
+import { useAnalytics } from '../analytics/analytics'
 
 const CALL_SCHEDULED_EVENT = parseAbiItem(
   'event CallScheduled(bytes32 indexed id, uint256 indexed index, address target, uint256 value, bytes data, bytes32 predecessor, uint256 delay)',
@@ -57,6 +58,7 @@ export function useChainSync(
   chainId: number | undefined,
   onSynced: () => void,
 ) {
+  const {sendEvent} = useAnalytics();
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
@@ -71,6 +73,8 @@ export function useChainSync(
 
   const sync = useCallback(async () => {
     if (!timelockAddress || !chainId || !client) return
+
+    sendEvent('scan_operations_button_clicked');
     setIsSyncing(true)
     setSyncError(null)
     setSyncResult(null)
