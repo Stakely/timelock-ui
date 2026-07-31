@@ -1,3 +1,17 @@
+# Supply-chain quarantine: never install a version published less than 7 days
+# ago (10080 minutes). Gives npm/GHSA a window to pull a compromised release
+# before it reaches our lockfile.
+#
+# Expected side effect: `pnpm outdated` will list packages that are merely in
+# quarantine, not unmaintained. That's the policy working, not a failure.
+#
+# Requires pnpm >= 11.18.0 (see `packageManager` in package.json and the
+# pnpm/action-setup pin in .github/workflows/ci.yml). Earlier versions abort
+# with ERR_PNPM_MISSING_TIME on packages with large metadata documents
+# (es-toolkit, @solana/*, vitest): they fetch the registry's abbreviated
+# metadata, which omits the `time` field this filter reads.
+minimumReleaseAge: 10080
+
 # Pin paulmillr's `qr` to 0.5.5. Newer versions (0.6.0 at time of writing)
 # reject `border=0`, which is what RainbowKit's `cuer` dependency passes when
 # rendering the WalletConnect QR. Result: "Uncaught Error: invalid border=0"
@@ -5,6 +19,15 @@
 # the working version.
 overrides:
   qr: 0.5.5
+  # Memory-exhaustion DoS from tiny fragments, plus uninitialized memory
+  # disclosure, in ws 8.x. viem/walletconnect pull in 8.18.0. The range leaves
+  # the 7.x line alone: 7.5.13 is already patched and
+  # @walletconnect/jsonrpc-ws-connection doesn't support ws 8.
+  ws@>=8.0.0 <8.21.0: ^8.21.1
+  # Nine advisories against axios <1.18.0 (inherited proxy in the Node adapter,
+  # prototype pollution, runaway recursion in formDataToJSON). Reaches us
+  # through @coinbase/cdp-sdk.
+  axios: ^1.18.1
 
 # Explicitly deny build scripts for optional native modules pulled in by ws and
 # keccak transitives. They all have pure-JS fallbacks and we don't need the
