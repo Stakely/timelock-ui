@@ -12,8 +12,16 @@
 # metadata, which omits the `time` field this filter reads.
 minimumReleaseAge: 10080
 
-# Si pese a todo a un paquete le falta el campo "time", fallar en vez de
-# saltarse la comprobacion en silencio con un WARN.
+# Si a un paquete le falta el campo "time", fallar en vez de saltarse la
+# comprobacion en silencio con un WARN (que es el default, `true`).
+#
+# Contrapartida asumida: esto es fail-closed, asi que un registry que sirva
+# metadata recortado sin "time" rompe el install en vez de dejarlo pasar sin
+# comprobar. Con registry.npmjs.org no ocurre, porque pnpm se descarga el
+# documento completo cuando el abreviado no lo trae. Si algun dia se instala
+# desde un mirror o un registro privado (Verdaccio, Artifactory) y los installs
+# empiezan a fallar por esto, la solucion es arreglar el mirror para que sirva
+# "time", no poner esta opcion en `true`.
 minimumReleaseAgeIgnoreMissingTime: false
 
 # Pin paulmillr's `qr` to 0.5.5. Newer versions (0.6.0 at time of writing)
@@ -50,7 +58,15 @@ overrides:
   # SSR entre peticiones en memo(), DoS en el middleware de idioma y mas.
   # Llega via rainbowkit > wagmi > porto.
   hono@<4.12.34: ^4.12.34
-  # DoS por arrays intermedios sin limite. Solo dev, via eslint.
+  # DoS por arrays intermedios sin limite. Hoy solo aplica a la 5.x, que entra
+  # por eslint > minimatch@10 (dev). Las ramas 1.x y 2.x no estan en el arbol,
+  # pero se cubren igualmente: si mañana entra un glob o un minimatch@3 que
+  # declare ^1.1.x o ^2.x, el selector de la 5.x no lo alcanzaria y volveria a
+  # colarse una version vulnerable. Cada rango sube dentro de su propio major,
+  # asi que no puede colar un cambio de API. La 3.x no aparece en ningun rango
+  # vulnerable de los avisos actuales, por eso no lleva entrada.
+  brace-expansion@<1.1.17: ^1.1.18
+  brace-expansion@>=2.0.0 <2.1.4: ^2.1.4
   brace-expansion@>=4.0.0 <5.0.9: ^5.0.9
 
 # No forzar decode-uri-component. El aviso (moderate, DoS por decodificacion
