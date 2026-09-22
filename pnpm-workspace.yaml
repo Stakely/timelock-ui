@@ -12,6 +12,10 @@
 # metadata, which omits the `time` field this filter reads.
 minimumReleaseAge: 10080
 
+# Si pese a todo a un paquete le falta el campo "time", fallar en vez de
+# saltarse la comprobacion en silencio con un WARN.
+minimumReleaseAgeIgnoreMissingTime: false
+
 # Pin paulmillr's `qr` to 0.5.5. Newer versions (0.6.0 at time of writing)
 # reject `border=0`, which is what RainbowKit's `cuer` dependency passes when
 # rendering the WalletConnect QR. Result: "Uncaught Error: invalid border=0"
@@ -28,6 +32,32 @@ overrides:
   # prototype pollution, runaway recursion in formDataToJSON). Reaches us
   # through @coinbase/cdp-sdk.
   axios: ^1.18.1
+  # Bounds check ausente en uuid v3/v5/v6. Llega via
+  # rainbowkit > wagmi > @gemini-wallet/core > @metamask/utils.
+  uuid@<11.1.1: ^11.1.1
+  # PostCSS: parche incompleto de GHSA-6g55-p6wh-862q, y nanoid: los
+  # generadores personalizados pueden entrar en bucle. Ambos via vite.
+  postcss@<8.5.23: ^8.5.23
+  nanoid@<3.3.18: ^3.3.18
+  # Cinco avisos contra undici 7.x, uno de ellos high (fuga de informacion
+  # entre usuarios). Solo dev: llega via jsdom.
+  undici@>=7.0.0 <7.29.0: ^7.29.0
+  # Siete avisos contra hono <4.12.34: ReDoS en el middleware CORS, fuga de
+  # SSR entre peticiones en memo(), DoS en el middleware de idioma y mas.
+  # Llega via rainbowkit > wagmi > porto.
+  hono@<4.12.34: ^4.12.34
+  # DoS por arrays intermedios sin limite. Solo dev, via eslint.
+  brace-expansion@>=4.0.0 <5.0.9: ^5.0.9
+
+# No forzar decode-uri-component. El aviso (moderate, DoS por decodificacion
+# exponencial) pide >=0.4.3, version que no existe: el unico parche es 0.5.0,
+# y esa es ESM pura ("type": "module"). query-string@7.1.3 --que es quien la
+# usa, via @walletconnect/utils-- la carga con require(), asi que en 0.5.0
+# recibe el namespace del modulo en vez de la funcion y revienta con
+# "decodeComponent is not a function" al parsear cualquier query string.
+# Comprobado: el build de vite y los 64 tests pasan igualmente, el fallo solo
+# sale al ejecutar query-string. Revisar cuando walletconnect suba a
+# query-string 8+, que ya usa la API nueva.
 
 # Explicitly deny build scripts for optional native modules pulled in by ws and
 # keccak transitives. They all have pure-JS fallbacks and we don't need the
