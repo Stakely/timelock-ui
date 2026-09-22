@@ -32,8 +32,12 @@ overrides:
   # prototype pollution, runaway recursion in formDataToJSON). Reaches us
   # through @coinbase/cdp-sdk.
   axios: ^1.18.1
-  # Bounds check ausente en uuid v3/v5/v6. Llega via
-  # rainbowkit > wagmi > @gemini-wallet/core > @metamask/utils.
+  # Bounds check ausente en uuid v3/v5/v6. El selector alcanza 5 dependientes,
+  # todos bajo rainbowkit > wagmi > @wagmi/connectors: @metamask/sdk y
+  # @metamask/sdk-communication-layer (declaran ^8.3.2), y @metamask/utils
+  # 8.5.0 / 9.3.0 / 11.11.0 (declaran ^9.0.1), que entran por tres caminos:
+  # @metamask/rpc-errors > @gemini-wallet/core, @coinbase/wallet-sdk y
+  # @metamask/providers. El lockfile queda con una unica copia, 11.1.1.
   uuid@<11.1.1: ^11.1.1
   # PostCSS: parche incompleto de GHSA-6g55-p6wh-862q, y nanoid: los
   # generadores personalizados pueden entrar en bucle. Ambos via vite.
@@ -58,6 +62,14 @@ overrides:
 # Comprobado: el build de vite y los 64 tests pasan igualmente, el fallo solo
 # sale al ejecutar query-string. Revisar cuando walletconnect suba a
 # query-string 8+, que ya usa la API nueva.
+#
+# Aviso: GHSA-vcc3-ghjq-m6fr (CVE-2026-45822). Ojo al leerlo, porque pnpm audit
+# dice "patched >=0.4.3" y esa version no existe: las publicadas son 0.1.0-0.4.1
+# y 0.5.0, y el GHSA lista 0.5.0 como el parche real.
+#
+# La version instalada hoy es 0.2.2, no 0.4.1: query-string declara ^0.2.2 y es
+# lo que resuelve. El 0.4.1 que se cita arriba es solo la ultima vulnerable
+# publicada, util para entender el salto, no lo que hay en el lockfile.
 
 # Explicitly deny build scripts for optional native modules pulled in by ws and
 # keccak transitives. They all have pure-JS fallbacks and we don't need the
