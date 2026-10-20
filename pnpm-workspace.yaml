@@ -37,9 +37,15 @@ overrides:
   # @walletconnect/jsonrpc-ws-connection doesn't support ws 8.
   ws@>=8.0.0 <8.21.0: ^8.21.1
   # Nine advisories against axios <1.18.0 (inherited proxy in the Node adapter,
-  # prototype pollution, runaway recursion in formDataToJSON). Reaches us
+  # prototype pollution, runaway recursion in formDataToJSON), and twelve more
+  # against <1.20.0 (ReDoS in data: URLs and NO_PROXY, prototype-pollution
+  # gadgets, the HTTP/2 adapter bypassing DNS and proxy settings). Reaches us
   # through @coinbase/cdp-sdk.
-  axios: ^1.18.1
+  #
+  # The floor is what matters, not the caret: pnpm keeps an already-locked
+  # version while it still satisfies the range, so `^1.18.1` sat on 1.18.1 for
+  # a month after 1.20.0 shipped. Raising the floor is what moves it.
+  axios: ^1.20.0
   # Bounds check ausente en uuid v3/v5/v6. El selector alcanza 5 dependientes,
   # todos bajo rainbowkit > wagmi > @wagmi/connectors: @metamask/sdk y
   # @metamask/sdk-communication-layer (declaran ^8.3.2), y @metamask/utils
@@ -51,13 +57,19 @@ overrides:
   # generadores personalizados pueden entrar en bucle. Ambos via vite.
   postcss@<8.5.23: ^8.5.23
   nanoid@<3.3.18: ^3.3.18
+  # GHSA-68fv-2mgg-jv7q (high): DoS del event loop con source maps indexados.
+  # Llega por tres padres de build (@tailwindcss/node, css-tree y postcss), que
+  # declaran ^1.2.x; hace falta override porque pnpm no re-resuelve una
+  # transitiva que ya cumple su rango.
+  source-map-js@<1.2.2: ^1.2.2
   # Cinco avisos contra undici 7.x, uno de ellos high (fuga de informacion
   # entre usuarios). Solo dev: llega via jsdom.
   undici@>=7.0.0 <7.29.0: ^7.29.0
   # Siete avisos contra hono <4.12.34: ReDoS en el middleware CORS, fuga de
-  # SSR entre peticiones en memo(), DoS en el middleware de idioma y mas.
-  # Llega via rainbowkit > wagmi > porto.
-  hono@<4.12.34: ^4.12.34
+  # SSR entre peticiones en memo(), DoS en el middleware de idioma y mas. Y
+  # despues GHSA-5r4p-p66f-jhc7 (moderate, serveStatic decodifica la ruta dos
+  # veces), que pide >=4.13.11. Llega via rainbowkit > wagmi > porto.
+  hono@<4.13.11: ^4.13.11
   # DoS por arrays intermedios sin limite. Hoy solo aplica a la 5.x, que entra
   # por eslint > minimatch@10 (dev). Las ramas 1.x y 2.x no estan en el arbol,
   # pero se cubren igualmente: si mañana entra un glob o un minimatch@3 que
@@ -76,7 +88,11 @@ overrides:
 # recibe el namespace del modulo en vez de la funcion y revienta con
 # "decodeComponent is not a function" al parsear cualquier query string.
 # Comprobado: el build de vite y los 64 tests pasan igualmente, el fallo solo
-# sale al ejecutar query-string. Revisar cuando walletconnect suba a
+# sale al ejecutar query-string. Y no es cosa de Node: empaquetando con el Vite
+# del repo la misma ruta que usa @walletconnect/utils y ejecutando el bundle,
+# revienta igual con la 0.5.0 y funciona con la 0.2.2. Ojo, no es el caso de
+# stream-json en otros repos, donde el modulo roto no lo cargaba nadie: aqui
+# query-string esta en la ruta real de WalletConnect. Revisar cuando walletconnect suba a
 # query-string 8+, que ya usa la API nueva.
 #
 # Aviso: GHSA-vcc3-ghjq-m6fr (CVE-2026-45822). Ojo al leerlo, porque pnpm audit
